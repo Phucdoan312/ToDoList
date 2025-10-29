@@ -28,10 +28,24 @@ public class TaskController {
         return taskService.createTask(createTaskDTO);
     }
 
-    // 9. API 2: LẤY TẤT CẢ TASK
+    // 8. API 2: LẤY TẤT CẢ TASK
     @GetMapping // "Bắt" lấy request GET (lấy dữ liệu)
     public List<TaskDTO> getAllTasks() {
         // 10. Chuyển lệnh cho "Bộ não"
         return taskService.getAllTasks();
+    }
+
+    // 9. API 3: LẤY 1 TASK THEO ID
+    // {id} là một "biến" trên đường dẫn (path variable)
+    @GetMapping("/{id}")
+    public TaskDTO getTaskById(@PathVariable Long id) {
+        return taskService.getTaskById(id);
+    }
+
+    // 10. API 4: CẬP NHẬT 1 TASK (MÓN MỚI)
+    @PutMapping("/{id}") // 1.
+    public TaskDTO updateTask(@PathVariable Long id, @RequestBody TaskDTO taskDetails) { // 2.
+        // 3. Chỉ cần gọi "Bộ não"
+        return taskService.updateTask(id, taskDetails);
     }
 }
