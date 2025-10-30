@@ -41,4 +41,11 @@ public interface TaskService {
      * @throws ResourceNotFoundException Khi không tìm thấy Task với ID tương ứng.
      */
     TaskDTO updateTask(Long id, TaskDTO taskDetails);
+
+    /**
+     * Nghiệp vụ 5: Xóa một Task.
+     * @param id ID của Task cần xóa.
+     * @throws ResourceNotFoundException Khi không tìm thấy Task.
+     */
+    void deleteTask(Long id); // void vì không cần trả về gì
 }

@@ -87,4 +87,17 @@ public class TaskServiceImpl implements TaskService { // 4. "Thực thi Hợp đ
         //      Ra lệnh "Phiên dịch" dịch Entity (đã cập nhật) -> DTO.
         return taskMapper.toTaskDTO(updatedTask);
     }
+
+    @Override
+    public void deleteTask(Long id) {
+        // B1: TÌM (Find) - Tái sử dụng logic "tìm hoặc văng lỗi"
+        Task taskToDelete = taskRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Không thể xóa Task. Không tìm thấy ID: " + id));
+
+        // B2: XÓA (Delete) - Ra lệnh "Thủ kho"
+        //     Gửi Entity tìm được để xóa.
+        taskRepository.delete(taskToDelete);
+
+        // (Không cần B3, vì hàm này là "void", không trả về gì)
+    }
 }
