@@ -5,6 +5,7 @@ import myproject.todolist.dto.CreateTaskDTO;
 import myproject.todolist.dto.TaskDTO;
 import myproject.todolist.service.TaskService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*; // Import các annotation Web
 
 import java.util.List;
@@ -47,5 +48,12 @@ public class TaskController {
     public TaskDTO updateTask(@PathVariable Long id, @RequestBody TaskDTO taskDetails) { // 2.
         // 3. Chỉ cần gọi "Bộ não"
         return taskService.updateTask(id, taskDetails);
+    }
+
+    // 12. API 5: XÓA 1 TASK
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteTask(@PathVariable Long id) { // 1.
+        taskService.deleteTask(id);
+        return ResponseEntity.noContent().build(); // 2.
     }
 }
