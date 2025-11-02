@@ -22,4 +22,8 @@ public class Task {
     private String title;
 
     private boolean isCompleted; // 11. CỘT: Mặc định là 'false'
+
+    @ManyToOne // "Nhiều" Task cho "Một" User
+    @JoinColumn(name = "user_id") // Tên của cột khóa ngoại
+    private User user;
 }
