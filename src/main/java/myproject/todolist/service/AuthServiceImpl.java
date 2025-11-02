@@ -3,77 +3,91 @@ package myproject.todolist.service;
 import myproject.todolist.dto.AuthResponseDTO;
 import myproject.todolist.dto.LoginDTO;
 import myproject.todolist.dto.RegisterDTO;
-import myproject.todolist.config.JwtTokenProvider; // 1. Import "Máy In Vé"
+import myproject.todolist.config.JwtTokenProvider;
 import myproject.todolist.model.User;
 import myproject.todolist.repository.UserRepository;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.authentication.AuthenticationManager; // 2. Import "Máy Quản lý"
+import lombok.RequiredArgsConstructor;
+import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.crypto.password.PasswordEncoder; // 3. Import "Máy Băm"
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional; // ⬅️ IMPORT QUAN TRỌNG
 
-@Service // 4. BÁO SPRING: "Đây là Bean Dịch vụ"
-public class AuthServiceImpl implements AuthService { // 5. "Thực thi Hợp đồng"
+@Service
+@RequiredArgsConstructor
+public class AuthServiceImpl implements AuthService {
 
-    // 6. "Tiêm" (Inject) tất cả các "công cụ" cần thiết
-    @Autowired
-    private AuthenticationManager authenticationManager; // "Máy Quản lý" (từ SecurityConfig)
+    // Sử dụng Constructor Injection (private final) - CHUẨN
+    private final AuthenticationManager authenticationManager;
+    private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
+    private final JwtTokenProvider tokenProvider;
 
-    @Autowired
-    private UserRepository userRepository; // "Thủ kho" User
-
-    @Autowired
-    private PasswordEncoder passwordEncoder; // "Máy Băm" (từ SecurityConfig)
-
-    @Autowired
-    private JwtTokenProvider tokenProvider; // "Máy In Vé"
-
-    // 7. Logic Nghiệp vụ 1: ĐĂNG NHẬP (LOGIN)
+    // --- LOGIC AUTHENTICATION (Đăng nhập) ---
     @Override
     public AuthResponseDTO login(LoginDTO loginDTO) {
 
-        // B1: "Thử" đăng nhập
-        //      Đưa 'email' (username) và 'password' (chưa băm) cho "Máy Quản lý"
+        // B1: "LÀM SẠCH" email đầu vào trước khi xác thực (Tránh lỗi)
+        String cleanEmail = loginDTO.getEmail().trim().toLowerCase();
+
+        // B2: "Thử" đăng nhập (Ủy thác cho AuthenticationManager)
         Authentication authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(
-                        loginDTO.getEmail(),
+                        cleanEmail,
                         loginDTO.getPassword()
                 )
         );
 
-        // B2: Nếu (B1) không văng lỗi (tức là đăng nhập thành công)
-        //     "Đóng dấu" (authenticate) cho phiên này
+        // B3: "Đóng dấu" (Authenticate) cho phiên
         SecurityContextHolder.getContext().setAuthentication(authentication);
 
-        // B3: Dùng "Máy In Vé" để tạo 1 "vé" mới
-        String token = tokenProvider.generateToken(loginDTO.getEmail());
+        // B4: Lấy email ĐÃ ĐƯỢC XÁC THỰC (sạch) từ 'authentication'
+        String authenticatedEmail = authentication.getName();
 
-        // B4: Gửi "vé" về cho React
+        // B5: Dùng email "sạch" để tạo "vé"
+        String token = tokenProvider.generateToken(authenticatedEmail);
+
         return new AuthResponseDTO(token);
     }
 
-    // 8. Logic Nghiệp vụ 2: ĐĂNG KÝ (REGISTER)
+    // --- LOGIC AUTHORIZATION (Đăng ký) ---
+    @Transactional // ⬅️ THÊM CÁI NÀY ĐỂ BẢO ĐẢM GIAO DỊCH ĐƯỢC CAM KẾT (FIX BUG)
     @Override
     public String register(RegisterDTO registerDTO) {
 
-        // B1: Kiểm tra xem User (email) đã tồn tại chưa?
-        if (userRepository.findByEmail(registerDTO.getEmail()).isPresent()) {
-            // Nếu đã tồn tại, văng lỗi (hoặc trả về thông báo lỗi)
+        // B1: "LÀM SẠCH" (Normalize) email trước khi kiểm tra
+        String cleanEmail = registerDTO.getEmail().trim().toLowerCase();
+
+        // B2: Dùng email "sạch" để kiểm tra tồn tại
+        if (userRepository.findByEmail(cleanEmail).isPresent()) {
+            // NÊN tạo một Exception tùy chỉnh để xử lý lỗi 409 Conflict (tồn tại)
             throw new RuntimeException("Email đã được sử dụng!");
         }
 
-        // B2: Nếu email mới, tạo 1 User mới
+        // B3: Nếu email mới, tạo 1 User mới
         User user = new User();
-        user.setEmail(registerDTO.getEmail());
+        user.setEmail(cleanEmail); // LƯU EMAIL "SẠCH"
 
-        // B3: Dùng "Máy Băm" để băm mật khẩu
+        // B4: Dùng "Máy Băm" để băm mật khẩu
         user.setPassword(passwordEncoder.encode(registerDTO.getPassword()));
-
-        // B4: Dùng "Thủ kho" để lưu User mới vào CSDL
+        System.out.println(">>> [AuthService] Đang chuẩn bị lưu User: " + cleanEmail);
+        // B5: Dùng "Thủ kho" để lưu User mới vào CSDL (Commit sẽ xảy ra sau khi hàm này kết thúc)
         userRepository.save(user);
 
         return "Đăng ký thành công!";
+    }
+
+    // --- LOGIC TIỆN ÍCH (Cho TaskService) ---
+    @Override
+    public User getCurrentUser() {
+
+        // B1: Lấy email của người dùng từ SecurityContextHolder
+        String userEmail = SecurityContextHolder.getContext().getAuthentication().getName();
+
+        // B2: Dùng email để tìm User Entity trong CSDL (Đây là email đã được làm sạch)
+        return userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new RuntimeException("Authenticated user not found in DB. Email: " + userEmail));
     }
 }
