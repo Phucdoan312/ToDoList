@@ -4,6 +4,7 @@ package myproject.todolist.service; // 1. "Địa chỉ"
 import myproject.todolist.dto.AuthResponseDTO;
 import myproject.todolist.dto.LoginDTO;
 import myproject.todolist.dto.RegisterDTO;
+import myproject.todolist.model.User;
 
 // 3. Đây là "Hợp đồng Logic" cho Xác thực
 public interface AuthService {
@@ -23,4 +24,10 @@ public interface AuthService {
      * @return Một DTO chứa "Cái vé" (Access Token)
      */
     AuthResponseDTO login(LoginDTO loginDTO); // 5.
+
+    /**
+     * Lấy User (Entity) của người đang được xác thực (đang login).
+     * @return User Entity
+     */
+    User getCurrentUser();
 }
